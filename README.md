@@ -46,9 +46,9 @@ repository never carries it.
 |---|---|
 | **Memory** (`memory/`, `memory-compact` skill, hooks) | A small digest injected into every session, one note per subject indexed at session start, user corrections, and an append-only log each session writes to as it works. A filing pass files what is durable from the log and the git history into the notes and the digest (and reads session transcripts too, when the session running it can list them). By default a scheduled task runs it, nightly; set `memory_filing: in-session` in `workspace.yaml` for no task at all, and whichever session finds the log past 50 entries (`memory_filing_threshold`) files it before it ends. |
 | **Session hygiene** (`agent-tools/hooks/git-sync.sh`, `agent-tools/sync-push.sh`) | Repairs the shallow-snapshot divergence cloud containers show, keeps sessions on the default branch, and pushes with rebase-and-retry so two concurrent sessions don't lose each other's work. |
-| **WhatsApp**, optional (`whatsapp` skill, `whatsapp-send-gate` agent) | A dedicated bot number answers the people involved — an event's guests, a project's team. Every reply is drafted, recorded, then judged by an isolated subagent that sees only the transcript, the draft, and an identity check. Anything about another person, anyone's money, or anything embarrassing waits for the owner. One thread file per contact is the durable record. Webhook-driven: each message wakes a fresh session. Off unless `workspace.yaml` has a `whatsapp:` block. |
+| **WhatsApp**, optional (`whatsapp` skill, `whatsapp-send-gate` agent) | A dedicated bot number answers the people involved — an event's guests, a project's team. Every reply is drafted, recorded, then judged by an isolated subagent that sees only the transcript, the draft, and an identity check. Anything about another person, anyone's money, or anything embarrassing waits for the owner. One thread file per contact is the durable record. Webhook-driven: each message wakes a fresh session. Off unless `workspace.yaml` has a `whatsapp:` block; without one the skill and agent are not installed. |
 | **`setup` and `migrate` skills** | `setup` creates and audits the scheduled tasks the workspace runs on (the filing pass unless it is in-session, the WhatsApp routine). `migrate` reshapes stored memory when an engine update crosses a major version. |
-| **gsheets** skill | Read and write a Google Sheet in place via a service account. Ships no key. |
+| **gsheets** skill, optional | Read and write a Google Sheet in place via a service account. Ships no key. Not installed unless `workspace.yaml` has a `sheets:` block. |
 | **Two registers** | A technical owner and co-users (a partner, teammates, family) get different voices, the same facts. |
 | **Classifier rules** (`automode.json`, `agent-tools/automode/`) | Auto-mode rules kept in the repo, merged into the environment's settings by a script the environment's setup script calls (a paste-once block that does nothing unless a memory workspace is among the checkouts), with a session-start drift check. A repo cannot ship these directly; see the ops notes. |
 | **The contract** (`agent-tools/AGENTS.md`, installed as your root `AGENTS.md`) | The rules above, written for an agent to follow. Generic; updated from upstream. This repository's own root `AGENTS.md` is the maintainer guide for the template, not the contract. |
@@ -69,7 +69,9 @@ yourself:
    empty forms (what is there is the template's own history; `ONBOARDING.md`
    step 5 says exactly what to keep), trim the maintainer note out of
    `CLAUDE.md` (keep its three `@` imports), and fix or remove the example
-   WhatsApp allow rules in `.claude/settings.json`. Delete `ONBOARDING.md`,
+   WhatsApp allow rules in `.claude/settings.json`. Delete the `sheets:` and
+   `whatsapp:` blocks you do not use, then run `agent-tools/features.sh`: it
+   removes the skills and scripts of any feature without a block. Delete `ONBOARDING.md`,
    `docs/spin-out-plan.md`, the template-only `bump-version` skill
    (`.claude/skills/` and `.agents/skills/`) and the release workflow
    (`.github/workflows/release.yml`).

@@ -144,11 +144,13 @@ Three things to be straight about when they ask:
   against), and that bridge reachable from claude.ai as a connector. "Later"
   is the right answer for most people on day one, and nothing else depends on
   it.
-- **Turning a feature "off" means leaving it unconfigured, not deleting it.**
-  Everything under `agent-tools/` comes back on the next `update.sh`. An
-  unconfigured skill is inert, which is the supported off switch. If they want
-  a skill gone from their sessions anyway, say that it will return on update
-  and let them decide.
+- **A feature they turn off is not installed.** Google Sheets and WhatsApp are
+  on exactly when `workspace.yaml` has a `sheets:` / `whatsapp:` block, and
+  step 4 runs `agent-tools/features.sh`, which removes the skills, scripts and
+  registrations of whichever is absent. `update.sh` runs it too, so they stay
+  gone. Turning one on later is: add the block, run `agent-tools/update.sh`.
+  "Later" for WhatsApp keeps the block (commented as unused), so its skill
+  stays available for the setup walk-through.
 - **The engine is not theirs to edit.** `agent-tools/` and the root `AGENTS.md`
   are overwritten on every update; per-workspace behaviour goes in `workspace.yaml`,
   `WORKSPACE.md` and `memory/`. Say this once now — it is the mistake that costs a
@@ -202,11 +204,23 @@ the skills actually read, and `update.sh` never touches them.
 
 **`workspace.yaml`** — `name`, `default_branch` (match what you passed to
 `git init`), `agent_tools_track`, `owners`, `co_users`, `source_of_truth`,
-`memory_filing` and `memory_filing_threshold` (the example ships them set to the defaults; change them only to what they chose), `sheets` (ids, not URLs; delete the block if there are none). The `whatsapp`
+`memory_filing` and `memory_filing_threshold` (the example ships them set to the defaults; change them only to what they chose), `sheets` (ids, not URLs; **delete the block if Sheets is off** — the gsheets skill is then removed below). The `whatsapp`
 block: fill it in if the bot is on; if it is "later", leave the example values
 and add a comment on the block saying it is unused until the bot is set up, so
 no session mistakes an example prefix for a real connector; if it is off,
-delete the block — without one, the workspace has no bot.
+**delete the block** — without one, the workspace has no bot and the WhatsApp
+skill, send-gate and `memory/whatsapp/` are removed.
+
+**Prune the features they did not choose** — once `workspace.yaml` is final:
+
+```bash
+agent-tools/features.sh      # lists what it removed; "nothing to prune" if both are on
+```
+
+With WhatsApp off, also `rm -rf memory/whatsapp` (step 5 otherwise keeps it), and
+drop the WhatsApp entries from `automode.json` (its `environment`, `allow` and
+`hard_deny` sentences about the bot) rather than installing rules for a bot that
+does not exist.
 
 **`AGENTS.md`** — the copy above, unedited. It is the workspace's contract and
 `update.sh` replaces it wholesale; an edit here is silently lost on the next
@@ -258,7 +272,7 @@ about this workspace, and it must not be inherited.
   its five headings with `*(empty)*` under each; `memory/user-edits.md` to its
   header plus `1. *(none yet)*`; `memory/filing-state.md` as shipped
   (`last_run: never`). Leave `memory/notes/.gitkeep` and
-  `memory/whatsapp/AGENTS.md` and `CLAUDE.md` in place; delete any note or
+  (when WhatsApp is on or "later") `memory/whatsapp/AGENTS.md` and `CLAUDE.md` in place; delete any note or
   thread file that is not one of those.
 - **Then log this session**, one line each,
   `- [YYYY-MM-DD] TYPE: observation`: the feature choices as `DECISION` lines
@@ -313,7 +327,9 @@ agent-tools/hooks/version-check.sh           # on the pinned track: "pinned to X
 grep -rn '^@' memory/*.md memory/notes/      # nothing. (memory/whatsapp/CLAUDE.md is the one
                                              #  deliberate import and is not in that set)
 ls -l .claude/skills .claude/agents          # symlinks, relative, resolving into agent-tools/;
-                                             #  no bump-version/ left (step 6)
+                                             #  no bump-version/ left (step 6); no gsheets or
+                                             #  whatsapp entry (nor whatsapp-send-gate.md) for a
+                                             #  feature that is off (step 4)
 test ! -e .github/workflows/release.yml      # gone (step 6), or the workspace cuts releases
 ```
 

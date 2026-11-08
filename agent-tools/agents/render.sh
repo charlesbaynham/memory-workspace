@@ -34,6 +34,11 @@ src = root / "agent-tools/agents/whatsapp-send-gate.md"
 dst = root / ".claude/agents/whatsapp-send-gate.md"
 link = "../../agent-tools/agents/whatsapp-send-gate.md"
 
+# WhatsApp not enabled (agent-tools/features.sh removed the shipped prompt):
+# there is no gate to build or to be stale.
+if not src.exists():
+    print("render: whatsapp is not enabled in workspace.yaml; no send-gate to render"); sys.exit(0)
+
 def gate_rules(text):
     """whatsapp.gate_rules from workspace.yaml, as a block scalar (|). PyYAML if
     present; otherwise a small reader for exactly that shape."""
