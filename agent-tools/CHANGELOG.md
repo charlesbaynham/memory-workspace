@@ -50,7 +50,7 @@ environment already had.
 
 - **`install.sh --snippet`** prints a block to paste once into the setup
   script of a shared environment. It finds each memory workspace among the
-  checkouts (`$PWD`, `$PWD/*`, `/home/user/*`), runs that workspace's own
+  checkouts (`$PWD`, its git toplevel, `$PWD/*`, `$HOME/*`, `/home/user/*`), runs that workspace's own
   `install.sh`, and does nothing when there is none. It carries no rules and
   no version, so it never needs re-pasting.
 

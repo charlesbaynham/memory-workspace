@@ -76,7 +76,11 @@ if [ "${1:-}" = "--snippet" ]; then
 # No-op when none is (a workspace is a checkout with workspace.yaml). Paste
 # AFTER any block that writes autoMode wholesale; this one only adds to it.
 _seen=" "
-for _d in "$PWD"/*/ "$PWD" /home/user/*/; do
+# Candidates: the checkout we are in (cwd, or its git toplevel from a subfolder),
+# the checkouts beside or below cwd, and the usual homes of cloud checkouts.
+for _d in "$PWD" "$(git -C "$PWD" rev-parse --show-toplevel 2>/dev/null)" \
+          "$PWD"/*/ "$HOME"/*/ /home/user/*/; do
+  [ -n "$_d" ] || continue
   _d="$(cd "$_d" 2>/dev/null && pwd)" || continue
   case "$_seen" in *" $_d "*) continue ;; esac; _seen="$_seen$_d "
   [ -f "$_d/workspace.yaml" ] && [ -f "$_d/agent-tools/automode/install.sh" ] \

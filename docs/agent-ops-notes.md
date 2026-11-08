@@ -66,9 +66,9 @@ keeps all three:
 - **Find the workspace by what it is, not where it is.** A memory workspace is
   a checkout with `workspace.yaml`; the template has only
   `workspace.yaml.example`. `install.sh --snippet` prints the loop to paste
-  into the environment's setup script: it looks in `$PWD`, `$PWD/*` and
-  `/home/user/*`, runs each workspace's *own* `install.sh`, and does nothing
-  if there are none. It carries no rules and no version, so it is pasted once;
+  into the environment's setup script: it looks in `$PWD`, its git toplevel, `$PWD/*`,
+  `$HOME/*` and `/home/user/*`, runs each workspace's *own* `install.sh`, and
+  does nothing if there are none. It carries no rules and no version, so it is pasted once;
   the rules and the logic come from the repository at the time it runs.
   `install.sh` itself takes the workspace from its own path, never `$PWD`,
   and refuses quietly if that directory is not a workspace with an
@@ -83,6 +83,20 @@ keeps all three:
   `automode-check.sh` reports that case as "partly installed".
 - **Exit 0 whatever happens.** A failing setup script stops the session from
   starting, and the rules are an optional extra.
+
+The four launches, as tested (scratch checkouts, fake `$HOME`):
+
+| Session starts in | Setup script | Result |
+|---|---|---|
+| a memory workspace (alone) | cwd is the repo, its parent, or a subfolder: found all three ways | rules merged |
+| another repo (alone) | no `workspace.yaml` anywhere in scope | nothing written |
+| a parent holding a workspace and others | found beside cwd | rules merged |
+| a parent holding no workspace | nothing found | nothing written |
+
+This covers the *setup script* only. What a session loads once it starts
+depends on where Claude starts: inside the workspace, its
+`.claude/settings.json` hooks and `CLAUDE.md` imports apply; started in the
+parent of several repos, they probably do not (untested).
 
 `install.sh --inline` still prints a self-contained block that carries the
 rules, for a setup script that runs before the clone. It cannot be
