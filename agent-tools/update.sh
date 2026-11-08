@@ -96,6 +96,11 @@ for k in "${KEEP[@]}"; do
 done
 cp "$DEST/AGENTS.md" "$ROOT/AGENTS.md"
 
+# The replace above brought back features this workspace did not choose
+# (workspace.yaml has no sheets: / whatsapp: block); drop them again before
+# skills are registered below.
+"$DEST/features.sh"
+
 # Skills are registered by .claude/skills/<name> symlinks and .agents/skills
 # stubs, which are only written at birth. Register any skill that arrived later.
 for dir in "$DEST"/skills/*/; do

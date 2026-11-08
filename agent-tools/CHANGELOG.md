@@ -20,6 +20,45 @@ what they have to do about it.
      VERSION together, in the same commit as the change. One `## X.Y.Z — date`
      heading per version; headings are what the tooling parses. -->
 
+## 1.4.0 — 2026-11-08
+
+**Features you did not choose are no longer installed.** A workspace that
+skipped Google Sheets or the WhatsApp bot used to get the `gsheets` and
+`whatsapp` skills, the send-gate agent and the Sheets scripts anyway — inert,
+but registered in every session — and every `update.sh` brought them back.
+
+### Changed
+
+- **`update.sh` now removes a feature `workspace.yaml` does not enable.** Sheets
+  is on when `workspace.yaml` has a `sheets:` block, WhatsApp when it has a
+  `whatsapp:` block (the same switch the contract already described for the bot).
+  Without the block, the skill, its `.claude/skills` and `.agents/skills`
+  registrations and, for WhatsApp, the `whatsapp-send-gate` agent are deleted
+  after the engine is replaced. A WhatsApp block left in place as "later" keeps
+  the skill. `skills/gsheets/assets/` (a local key) is never removed.
+- **`agents/render.sh` and `hooks/gate-check.sh` are quiet when WhatsApp is not
+  enabled** instead of reporting a missing send-gate.
+
+### Added
+
+- **`agent-tools/features.sh`**, which does the pruning above; `ONBOARDING.md`
+  runs it at birth, and `update.sh` runs it on every update. It lists what it
+  removed and does nothing in the template.
+- **`configure-features` skill** (registered for Claude Code and Codex by the update):
+  say "add WhatsApp", "add Google Sheets" or "add more features from the
+  original repository" and it writes the block, fetches the removed files,
+  restores `memory/whatsapp/`, hands over the owner's steps and commits. Say
+  "remove WhatsApp" and it deletes the block, prunes the files and unwires
+  `.claude/settings.json`, keeping `memory/whatsapp/` unless you ask. It also
+  shows what upstream has added since your version.
+
+### To do by hand
+
+- **Only if you use Sheets or WhatsApp without the matching block** in
+  `workspace.yaml`: add one (`sheets:` with your ids, or `whatsapp:` as in
+  `workspace.yaml.example`) *before* updating, or the skill is removed. To turn a
+  feature on later, use the `configure-features` skill; it comes back registered.
+
 ## 1.3.0 — 2026-11-08
 
 **The auto-mode installer is safe to put in a shared cloud environment.** A
