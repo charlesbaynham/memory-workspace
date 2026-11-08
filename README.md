@@ -44,10 +44,10 @@ repository never carries it.
 
 | Piece | What it does |
 |---|---|
-| **Memory** (`memory/`, `memory-compact` skill, hooks) | A small digest injected into every session, one note per subject indexed at session start, user corrections, and an append-only log each session writes to as it works. A filing pass — a scheduled task, nightly by default — files what is durable from the log and the git history into the notes and the digest (and reads session transcripts too, when the session running it can list them). |
+| **Memory** (`memory/`, `memory-compact` skill, hooks) | A small digest injected into every session, one note per subject indexed at session start, user corrections, and an append-only log each session writes to as it works. A filing pass files what is durable from the log and the git history into the notes and the digest (and reads session transcripts too, when the session running it can list them). By default a scheduled task runs it, nightly; set `memory_filing: in-session` in `workspace.yaml` for no task at all, and whichever session finds the log past 50 entries (`memory_filing_threshold`) files it before it ends. |
 | **Session hygiene** (`agent-tools/hooks/git-sync.sh`, `agent-tools/sync-push.sh`) | Repairs the shallow-snapshot divergence cloud containers show, keeps sessions on the default branch, and pushes with rebase-and-retry so two concurrent sessions don't lose each other's work. |
 | **WhatsApp**, optional (`whatsapp` skill, `whatsapp-send-gate` agent) | A dedicated bot number answers the people involved — an event's guests, a project's team. Every reply is drafted, recorded, then judged by an isolated subagent that sees only the transcript, the draft, and an identity check. Anything about another person, anyone's money, or anything embarrassing waits for the owner. One thread file per contact is the durable record. Webhook-driven: each message wakes a fresh session. Off unless `workspace.yaml` has a `whatsapp:` block. |
-| **`setup` and `migrate` skills** | `setup` creates and audits the scheduled tasks the workspace runs on (the filing pass, the WhatsApp routine). `migrate` reshapes stored memory when an engine update crosses a major version. |
+| **`setup` and `migrate` skills** | `setup` creates and audits the scheduled tasks the workspace runs on (the filing pass unless it is in-session, the WhatsApp routine). `migrate` reshapes stored memory when an engine update crosses a major version. |
 | **gsheets** skill | Read and write a Google Sheet in place via a service account. Ships no key. |
 | **Two registers** | A technical owner and co-users (a partner, teammates, family) get different voices, the same facts. |
 | **Classifier rules** (`automode.json`, `agent-tools/automode/`) | Auto-mode rules kept in the repo, installed into the environment by a script the setup script calls, with a session-start drift check. A repo cannot ship these directly; see the ops notes. |
@@ -85,7 +85,8 @@ yourself:
    `agent-tools/automode/install.sh` from the cloud environment's setup script
    (see `docs/agent-ops-notes.md` for why it has to be there).
 6. Open a session and say "set up the automations": the `setup` skill creates
-   the memory filing pass (the scheduled task that files what sessions learn)
+   the memory filing pass (the scheduled task that files what sessions learn;
+   skipped if you chose `memory_filing: in-session`)
    and, once WhatsApp is configured, checks its webhook routine. From then on the hooks put each session on the default branch and
    print the memory index; `CLAUDE.md` imports the contract, `WORKSPACE.md` and the
    digest.

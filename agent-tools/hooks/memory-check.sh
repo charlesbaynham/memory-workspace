@@ -6,8 +6,9 @@
 # The index (one line per note in memory/notes/, from each note's frontmatter)
 # is how a session knows what memory holds without loading it: the digest is
 # imported, the notes are read on demand. The pass itself is the memory-compact
-# skill, run nightly by a scheduled task; this hook only reports on it. It
-# never edits anything.
+# skill, run nightly by a scheduled task (or, when workspace.yaml says
+# `memory_filing: in-session`, by whichever session finds the log past the
+# threshold); this hook only reports on it. It never edits anything.
 #
 # Never fails a session — always exits 0.
 # ---------------------------------------------------------------------------
@@ -22,7 +23,11 @@ LOG=memory/log.md
 DIGEST=memory/digest.md
 STATE=memory/filing-state.md
 MEMPY=agent-tools/skills/memory-compact/memory.py
-THRESHOLD="${MEMORY_COMPACT_THRESHOLD:-40}"
+# Unfiled log entries that make the pass worth running: the environment variable,
+# else workspace.yaml `memory_filing_threshold`, else 50. Anything that is not a
+# positive integer is ignored.
+THRESHOLD="${MEMORY_COMPACT_THRESHOLD:-$(ws_cfg memory_filing_threshold 50)}"
+case "$THRESHOLD" in ''|*[!0-9]*|0) THRESHOLD=50 ;; esac
 STALE_HOURS=36
 
 [ -f "$LOG" ] || { note "no $LOG — memory system not installed here."; exit 0; }
@@ -66,9 +71,26 @@ if [ -n "$LAST_RUN" ] && [ "$LAST_RUN" != never ]; then
   [ -n "$then_s" ] && AGE_H=$(( ($(date +%s) - then_s) / 3600 ))
 fi
 
+# workspace.yaml `memory_filing`: `scheduled` (default) = a scheduled task runs
+# the pass; `in-session` = no task, and whichever session finds the log past the
+# threshold files it.
+FILING="$(ws_cfg memory_filing scheduled)"
+
 if in_template; then
   # No scheduled task here: the template's own sessions log, and compaction is by hand.
   note "log.md: $ENTRIES entries since the last compaction (template: compact by hand at about $THRESHOLD)."
+elif [ "$FILING" = in-session ]; then
+  # No scheduled task, so no staleness alarm: the only trigger is the log's length.
+  if [ -n "$AGE_H" ]; then
+    note "memory filing is in-session (no scheduled task); last pass ${AGE_H}h ago, $ENTRIES log entries unfiled."
+  else
+    note "memory filing is in-session (no scheduled task); no pass has run yet, $ENTRIES log entries unfiled."
+  fi
+  if [ "$ENTRIES" -ge "$THRESHOLD" ]; then
+    note "$ENTRIES unfiled entries reaches the threshold of $THRESHOLD: filing is THIS session's job."
+    note "Once you have dealt with what you were started for, and before the session ends,"
+    note "run the memory-compact skill (no need to ask the owner)."
+  fi
 elif [ -n "$AGE_H" ]; then
   if [ "$AGE_H" -gt "$STALE_HOURS" ]; then
     note "the nightly memory pass last ran ${AGE_H}h ago ($LAST_RUN) — it may have stopped."
@@ -81,7 +103,7 @@ else
   note "If the owner has not set one up, offer once: the setup skill creates it."
 fi
 
-if ! in_template && [ "$ENTRIES" -ge "$THRESHOLD" ] && { [ -z "$AGE_H" ] || [ "$AGE_H" -gt "$STALE_HOURS" ]; }; then
+if ! in_template && [ "$FILING" != in-session ] && [ "$ENTRIES" -ge "$THRESHOLD" ] && { [ -z "$AGE_H" ] || [ "$AGE_H" -gt "$STALE_HOURS" ]; }; then
   note "$ENTRIES unfiled log entries and no recent pass — run the memory-compact skill now if the owner agrees."
 fi
 

@@ -1,6 +1,6 @@
 ---
 name: memory-compact
-description: The memory filing pass — read memory/log.md and the git history since the last pass (plus the transcripts of sessions launched with this repository in scope, when the session running it can list them), and file what is durable into memory/notes/ and the digest. Run by a scheduled task, nightly or as often as hourly (a Haiku session selects and dispatches, Haiku subagents review one session each, and only when there is something durable a filer subagent — Sonnet by default — files and commits). Also use when the owner asks to compact, refresh or update memory. (Creating or repairing the nightly task is the setup skill's job.)
+description: The memory filing pass — read memory/log.md and the git history since the last pass (plus the transcripts of sessions launched with this repository in scope, when the session running it can list them), and file what is durable into memory/notes/ and the digest. Run by a scheduled task, nightly or as often as hourly, or — when workspace.yaml says `memory_filing: in-session` — by whichever session finds the log past the threshold (a Haiku session selects and dispatches, Haiku subagents review one session each, and only when there is something durable a filer subagent — Sonnet by default — files and commits). Also use when the owner asks to compact, refresh or update memory. (Creating or repairing the nightly task is the setup skill's job.)
 ---
 
 # The memory filing pass
@@ -123,16 +123,33 @@ yourself in the same order: reviewer.md once per session, then filing.md.
 pass. Make sure anything durable from your own session is already in a note or
 the log first, since your own transcript is not reviewed.
 
+**Run in-session** (`memory_filing: in-session`, and `memory-check.sh` reported
+the threshold reached): also the same pass, run by the working session itself.
+Differences:
+
+- Do it after the work you were started for, and say in a line that you are
+  filing. Don't ask the owner.
+- Commit and push your own work first. Step 1's switch-and-pull needs a clean
+  tree, and the filer stops if anything outside `memory/` is uncommitted.
+- Keep the dispatch: reviewers and the filer run as subagents so the pass costs
+  your context almost nothing. You have `list_sessions`, so step 3 reads
+  transcripts too, except your own.
+- If `state-set` exits 3, another session filed this window first: discard
+  your changes and stop. That is success, not failure.
+
 ## Setting up the nightly task
 
 The scheduled task that runs this pass is created, audited and repaired by the
 **`setup` skill** (`agent-tools/skills/setup/SKILL.md`), together with the
-workspace's other automations. Use that; don't create a task from here.
+workspace's other automations. Use that; don't create a task from here. With
+`memory_filing: in-session` there is no task to set up.
 
 ## When something is off
 
-- `memory-check.sh` reports the last pass at SessionStart. Older than about
-  36 hours means the task has stopped or is failing: say so to the owner once,
-  then run the `setup` skill, which audits and repairs it.
+- `memory-check.sh` reports the last pass at SessionStart. With a scheduled
+  task, older than about 36 hours means the task has stopped or is failing: say
+  so to the owner once, then run the `setup` skill, which audits and repairs
+  it. With `memory_filing: in-session` there is no such alarm; the hook says
+  when the threshold is reached instead.
 - Co-users on their own Claude accounts, local CLI sessions and Codex are
   invisible to the listing. The contract tells those sessions to keep logging.
