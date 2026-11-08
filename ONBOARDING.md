@@ -128,7 +128,7 @@ that "all the defaults" is a complete answer.
 
 | Feature | Question | Default |
 |---|---|---|
-| **Memory filing** | Memory itself is not optional; it is the reason the repository exists. Who files what sessions learned? `scheduled`: a scheduled task, nightly by default, set up by the `setup` skill after birth (§9). `in-session`: no task; whichever session finds the log past 40 entries files it before it ends. Choose `in-session` for a repository where a scheduled task is unwelcome (cost, no way to attach the repo, a team that wants nothing running unattended) | `scheduled`; recommend it |
+| **Memory filing** | Memory itself is not optional; it is the reason the repository exists. Who files what sessions learned? `scheduled`: a scheduled task, nightly by default, set up by the `setup` skill after birth (§9). `in-session`: no task; whichever session finds the log past a threshold (50 entries, `memory_filing_threshold`; ask only if they care) files it before it ends. Choose `in-session` for a repository where a scheduled task is unwelcome (cost, no way to attach the repo, a team that wants nothing running unattended) | `scheduled`; recommend it |
 | **Google Sheets** | Is the source of truth a Sheet you want the agent to read and write in place? Needs a one-off Google Cloud step from you. | on if they named a Sheet in round 1 |
 | **WhatsApp bot** | A dedicated number people text — an event's guests, a project's team — answered by the workspace, with an isolated send-gate on every reply. Needs a spare phone number and a bridge you host. Optional for every kind of workspace. | later for an event; off otherwise |
 | **Auto-mode rules** | Classifier rules kept in the repo and installed into a cloud environment, so routine work runs unattended. Only meaningful for Claude Code on the web. | on; recommend it, whichever way they open the repository |
@@ -202,8 +202,7 @@ the skills actually read, and `update.sh` never touches them.
 
 **`workspace.yaml`** — `name`, `default_branch` (match what you passed to
 `git init`), `agent_tools_track`, `owners`, `co_users`, `source_of_truth`,
-`memory_filing` (uncomment it and set `in-session` only if they chose that; leave
-it out otherwise), `sheets` (ids, not URLs; delete the block if there are none). The `whatsapp`
+`memory_filing` and `memory_filing_threshold` (the example ships them set to the defaults; change them only to what they chose), `sheets` (ids, not URLs; delete the block if there are none). The `whatsapp`
 block: fill it in if the bot is on; if it is "later", leave the example values
 and add a comment on the block saying it is unused until the bot is set up, so
 no session mistakes an example prefix for a real connector; if it is off,
@@ -358,7 +357,7 @@ Tell them what is left, listing only what their answers actually require:
   handles the WhatsApp wake too once WhatsApp is configured. Until it has run,
   nothing files what sessions log. With `in-session` there is no task to
   create: say instead that sessions file memory themselves once the log passes
-  40 entries.
+  `memory_filing_threshold` (50) entries.
 - **WhatsApp, now or later**: the prerequisites are in
   `agent-tools/skills/whatsapp/setup.md`. When they have them, open a session in
   the new repository and say "set up the WhatsApp routine"; the skill walks both

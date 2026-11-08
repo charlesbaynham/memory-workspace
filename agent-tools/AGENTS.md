@@ -97,8 +97,9 @@ Who runs the pass is the owner's choice, `memory_filing` in `workspace.yaml`:
 - **`scheduled`** (the default, and what a workspace without the key does): a
   scheduled task runs it, nightly by default or as often as hourly.
 - **`in-session`**: there is no scheduled task. **Filing is the job of whichever
-  session finds the log past the threshold** (40 entries; `memory-check.sh`
-  says so at `SessionStart`). See "The filing pass" below.
+  session finds the log past the threshold** (`memory_filing_threshold` in
+  `workspace.yaml`, 50 entries unless the owner chose otherwise;
+  `memory-check.sh` says so at `SessionStart`). See "The filing pass" below.
 
 You have no memory of previous sessions except these files. If information
 isn't in a note, check the log tail and `git log -p -- memory/` before

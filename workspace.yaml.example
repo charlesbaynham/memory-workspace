@@ -27,9 +27,16 @@ agent_tools_track: pinned
 # Who runs the memory filing pass (memory-compact skill).
 #   scheduled  (default) a scheduled task files nightly, or as often as you
 #              choose; the setup skill registers it.
-#   in-session no scheduled task. Whichever session finds memory/log.md past 40
-#              entries files it before it ends (memory-check.sh says when).
-# memory_filing: scheduled
+#   in-session no scheduled task. Whichever session finds memory/log.md past
+#              memory_filing_threshold entries files it before it ends
+#              (memory-check.sh says when).
+# Set it explicitly, even to the default, so the choice is on record.
+memory_filing: scheduled
+# Unfiled log entries at which a filing pass is worth running. In-session mode
+# files at this count; in scheduled mode it only decides when a session offers
+# to file by hand because the task has stopped. Lower files more often, higher
+# lets the log grow longer between passes.
+memory_filing_threshold: 50
 # The model of the filer subagent, which decides what is durable and edits the
 # notes. The setup skill writes this with the owner's choice. sonnet is the
 # default; opus costs more. Applies in either mode.

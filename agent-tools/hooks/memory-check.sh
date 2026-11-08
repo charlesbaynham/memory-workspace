@@ -23,7 +23,11 @@ LOG=memory/log.md
 DIGEST=memory/digest.md
 STATE=memory/filing-state.md
 MEMPY=agent-tools/skills/memory-compact/memory.py
-THRESHOLD="${MEMORY_COMPACT_THRESHOLD:-40}"
+# Unfiled log entries that make the pass worth running: the environment variable,
+# else workspace.yaml `memory_filing_threshold`, else 50. Anything that is not a
+# positive integer is ignored.
+THRESHOLD="${MEMORY_COMPACT_THRESHOLD:-$(ws_cfg memory_filing_threshold 50)}"
+case "$THRESHOLD" in ''|*[!0-9]*|0) THRESHOLD=50 ;; esac
 STALE_HOURS=36
 
 [ -f "$LOG" ] || { note "no $LOG — memory system not installed here."; exit 0; }

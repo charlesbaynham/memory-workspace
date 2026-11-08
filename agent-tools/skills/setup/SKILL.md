@@ -86,13 +86,17 @@ trade-off and recommend `scheduled`:
 - **scheduled**: a task files nightly (or as often as they choose), so memory
   stays current and no working session pays for it. Costs a scheduled task to
   keep alive, and a browser step to attach the repository.
-- **in-session**: no task. Whichever session finds `memory/log.md` past 40
-  entries files it before it ends. Nothing to register or go stale, but that
+- **in-session**: no task. Whichever session finds `memory/log.md` past
+  `memory_filing_threshold` entries (50 by default) files it before it ends. Nothing to register or go stale, but that
   session spends the extra minutes, and memory is only as fresh as the last
   time the threshold was hit.
 
 Write the answer to `workspace.yaml` (top level, beside `memory_filer_model`)
-and commit it.
+and commit it. **Write `memory_filing` whichever way the owner answers**, and
+`memory_filing_threshold: 50` beside it if the file lacks it, so the choice is
+on record and not just a default. For `in-session`, also ask whether 50 unfiled
+entries suits them: lower files more often and in smaller batches, higher lets
+the log grow. Write what they say.
 
 **`in-session`.** There is nothing to create. Ask only for the filer's model
 (below). If a filing task for this workspace is registered (§2), it will file
