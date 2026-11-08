@@ -50,7 +50,7 @@ repository never carries it.
 | **`setup` and `migrate` skills** | `setup` creates and audits the scheduled tasks the workspace runs on (the filing pass unless it is in-session, the WhatsApp routine). `migrate` reshapes stored memory when an engine update crosses a major version. |
 | **gsheets** skill | Read and write a Google Sheet in place via a service account. Ships no key. |
 | **Two registers** | A technical owner and co-users (a partner, teammates, family) get different voices, the same facts. |
-| **Classifier rules** (`automode.json`, `agent-tools/automode/`) | Auto-mode rules kept in the repo, installed into the environment by a script the setup script calls, with a session-start drift check. A repo cannot ship these directly; see the ops notes. |
+| **Classifier rules** (`automode.json`, `agent-tools/automode/`) | Auto-mode rules kept in the repo, merged into the environment's settings by a script the environment's setup script calls (a paste-once block that does nothing unless a memory workspace is among the checkouts), with a session-start drift check. A repo cannot ship these directly; see the ops notes. |
 | **The contract** (`agent-tools/AGENTS.md`, installed as your root `AGENTS.md`) | The rules above, written for an agent to follow. Generic; updated from upstream. This repository's own root `AGENTS.md` is the maintainer guide for the template, not the contract. |
 
 ## Getting started by hand
@@ -81,9 +81,12 @@ yourself:
    for the prerequisites — a second phone number, the bridge, a connector), then
    open a session and say "set up the WhatsApp routine". The skill walks both of
    you through it.
-5. Optional: copy `automode.json.example` → `automode.json` and call
-   `agent-tools/automode/install.sh` from the cloud environment's setup script
-   (see `docs/agent-ops-notes.md` for why it has to be there).
+5. Optional: copy `automode.json.example` → `automode.json`, and add the
+   block `agent-tools/automode/install.sh --snippet` prints to the cloud
+   environment's setup script (the default one is fine: the block does nothing
+   unless a memory workspace is among the repositories a session launches
+   with, however many others are attached; see `docs/agent-ops-notes.md` for
+   why it has to be there).
 6. Open a session and say "set up the automations": the `setup` skill creates
    the memory filing pass (the scheduled task that files what sessions learn;
    skipped if you chose `memory_filing: in-session`)

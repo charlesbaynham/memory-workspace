@@ -160,8 +160,8 @@ Three things to be straight about when they ask:
    which is a choice: private (default — the memory is deliberately readable by
    every session and is not written to be public) or public.
 2. **How will you open it?** A choice: Claude Code on the web (a cloud
-   environment, so the auto-mode installer needs to go in the environment's
-   setup script), locally, or both.
+   environment, so the auto-mode installer's discovery block needs to go in the
+   environment's setup script), locally, or both.
 
 ### Recap, then stop
 
@@ -345,11 +345,16 @@ Tell them what is left, listing only what their answers actually require:
   once in Google Cloud Shell, put the key it prints into the agent environment
   as `GOOGLE_SERVICE_ACCOUNT_KEY` (not into the repository), and share the Sheet
   with the service-account address it prints.
-- **Claude Code on the web**: add `agent-tools/automode/install.sh` to the cloud
-  environment's setup script. It has to run before the session starts —
-  `docs/agent-ops-notes.md` explains why a repository cannot ship classifier
-  rules itself. `install.sh --inline` prints a pasteable block if the setup
-  script runs before the clone.
+- **Claude Code on the web** (only if auto-mode rules are on): run
+  `agent-tools/automode/install.sh --snippet` and have them paste what it prints
+  into the setup script of the cloud environment they launch from — their
+  default one is fine and is the usual choice. It has to run before the session
+  starts (`docs/agent-ops-notes.md` explains why a repository cannot ship
+  classifier rules itself), and it is safe to share: it finds memory workspaces
+  among the checked-out repositories, installs the rules of each, and does
+  nothing when a session has none, so it is never needed per repository and
+  never needs re-pasting. If they already have a block that writes `autoMode`,
+  the new one goes after it; it adds to the rules and never replaces them.
 - **The automations** — when `memory_filing` is `scheduled` (the default), or
   WhatsApp is configured: open a session in the new repository and say "set up
   the automations". The `setup` skill creates the nightly memory pass (the
