@@ -44,10 +44,12 @@ but registered in every session — and every `update.sh` brought them back.
 - **`agent-tools/features.sh`**, which does the pruning above; `ONBOARDING.md`
   runs it at birth, and `update.sh` runs it on every update. It lists what it
   removed and does nothing in the template.
-- **`add-feature` skill** (registered for Claude Code and Codex by the update):
+- **`configure-features` skill** (registered for Claude Code and Codex by the update):
   say "add WhatsApp", "add Google Sheets" or "add more features from the
   original repository" and it writes the block, fetches the removed files,
-  restores `memory/whatsapp/`, hands over the owner's steps and commits. It also
+  restores `memory/whatsapp/`, hands over the owner's steps and commits. Say
+  "remove WhatsApp" and it deletes the block, prunes the files and unwires
+  `.claude/settings.json`, keeping `memory/whatsapp/` unless you ask. It also
   shows what upstream has added since your version.
 
 ### To do by hand
@@ -55,7 +57,7 @@ but registered in every session — and every `update.sh` brought them back.
 - **Only if you use Sheets or WhatsApp without the matching block** in
   `workspace.yaml`: add one (`sheets:` with your ids, or `whatsapp:` as in
   `workspace.yaml.example`) *before* updating, or the skill is removed. To turn a
-  feature on later, use the `add-feature` skill; it comes back registered.
+  feature on later, use the `configure-features` skill; it comes back registered.
 
 ## 1.3.0 — 2026-11-08
 

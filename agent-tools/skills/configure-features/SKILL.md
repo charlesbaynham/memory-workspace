@@ -1,16 +1,18 @@
 ---
-name: add-feature
-description: Add an optional feature to a workspace that is already set up — one the owner declined or postponed at onboarding (Google Sheets, the WhatsApp bot, auto-mode rules) — or see what else the upstream template offers and has added since. Use when the owner says "add WhatsApp", "add Google Sheets", "turn on the bot", "I want the Sheets skill after all", "add more features from the original repository", "what features did I skip?" or "is there anything new upstream?".
+name: configure-features
+description: Add or remove an optional feature of a workspace that is already set up — Google Sheets, the WhatsApp bot, auto-mode rules — and see what else the upstream template offers and has added since. Use when the owner says "add WhatsApp", "add Google Sheets", "turn on the bot", "add more features from the original repository", "what features did I skip?", "is there anything new upstream?", or wants one gone: "remove WhatsApp", "I don't need the Sheets skill", "turn off the bot", "what features do I have on?".
 ---
 
-# Adding a feature after the workspace exists
+# Adding and removing features after the workspace exists
 
 Onboarding lets the owner decline a feature, and `agent-tools/features.sh`
 then removes its skill and scripts (`update.sh` re-runs it, so they stay
-removed). This skill is the way back: it turns the feature on, fetches what was
-removed, wires it into this workspace's own files, and hands over whatever only
-the owner can do. The owner may name a feature ("add WhatsApp") or ask openly
-("add more features from the original repository"); either way start at §1.
+removed). A feature's switch is its block in `workspace.yaml`. This skill moves
+the switch either way: **adding** writes the block and fetches what was
+removed; **removing** deletes the block and prunes the files. Either way it
+wires the workspace's own files, hands over whatever only the owner can do, and
+commits. The owner may name a feature ("add WhatsApp", "remove Sheets") or ask
+openly ("add more features from the original repository"); start at §1.
 
 **Do it from a session in this workspace's repository, on the default
 branch.** Commit as the contract says (§5).
@@ -41,8 +43,9 @@ that. New upstream behaviour that is not one of the three optional features
 offer `agent-tools/update.sh --accept`, and follow the contract's "Updating the
 engine" if they take it.
 
-If the feature is already on, say so and stop; offer the `setup` skill if the
-trouble is that its automation is not firing.
+Adding a feature that is already on, or removing one that is off: say so and
+stop. Offer the `setup` skill if the trouble is that an automation is not
+firing. Adding goes through §2–§5, removing through §6.
 
 ## 2. Turn it on in `workspace.yaml`
 
@@ -124,9 +127,45 @@ Name only what remains, in the owner's register:
 ## 5. Record and commit
 
 Log it (`memory/log.md`, one line each, `- [YYYY-MM-DD] TYPE: …`): a `DECISION`
-for the feature turned on and why they changed their mind, `RESOURCE` for
+for the feature turned on (or off) and why they changed their mind, `RESOURCE` for
 spreadsheet ids, an `OPEN` for every prerequisite still outstanding. Update the
 digest's Tools & resources only if the filing pass would not. Then commit and
-push with `agent-tools/sync-push.sh "Add <feature>"` — the whole change in one
+push with `agent-tools/sync-push.sh "Add <feature>"` (or "Remove <feature>") — the whole change in one
 commit: `workspace.yaml`, `.claude/settings.json`, `WORKSPACE.md`, `memory/`,
-and the restored engine files.
+and the engine files restored or removed.
+
+## 6. Removing a feature
+
+Say first what goes and what stays, and get a yes before deleting anything
+(the question tool: "remove" against "keep"). Never remove on a hunch from the
+conversation; only on the owner's say-so.
+
+1. **`workspace.yaml`** — delete the feature's block (`sheets:` /
+   `whatsapp:`), including its comments. For auto-mode delete `automode.json`
+   instead (or only its WhatsApp sentences if the bot goes but the rules stay).
+2. **`agent-tools/features.sh`** — prunes the skill, its `.claude/skills` and
+   `.agents/skills` registrations and, for WhatsApp, the `whatsapp-send-gate`
+   agent. `update.sh` runs it too, so they stay gone. `skills/gsheets/assets/`
+   (a local key) is left alone; tell the owner it is there.
+3. **Wiring in the workspace's own files** — for WhatsApp, delete the
+   `mcp__<Name>__*` and `mcp__claude_ai_<Name>__*` entries from
+   `.claude/settings.json` `permissions.allow`; remove the bot register from
+   `WORKSPACE.md`. For Sheets, take the Sheet out of `WORKSPACE.md` and, if it
+   was the source of truth, update `source_of_truth` in `workspace.yaml` (where
+   the facts live now, or that there is nowhere).
+4. **`memory/whatsapp/` holds the only record of what the bot said and what
+   people said back.** Keep it by default; delete it only if the owner asks
+   (git history still has it). Say which you did.
+5. **What is outside this repository is the owner's**, and the agent cannot
+   undo it: switch the WhatsApp routine **inactive** in the browser (never
+   delete it — its token and subscription live on it, and re-adding the bot
+   later is then one switch), take the bot's connector out of the environment
+   if they want it gone, revoke or delete `GOOGLE_SERVICE_ACCOUNT_KEY` and the
+   Sheet's share with the service account, and for auto-mode take the pasted
+   block out of the environment's setup script. Name only those that apply. The
+   `setup` skill can then audit that nothing still expects the removed
+   automation.
+
+Log a `DECISION` (what, why) and an `OPEN` per outstanding step of §6.5, then
+commit as in §5. The session that did this still has the skill loaded; it is
+gone from the **next** session.

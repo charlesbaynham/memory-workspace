@@ -12,7 +12,7 @@
 #
 # Run by ONBOARDING.md after workspace.yaml is written, and by update.sh after
 # every engine update (which would otherwise bring the files straight back).
-# To turn a feature on later: the add-feature skill, or by hand add its block
+# To turn a feature on later: the configure-features skill, or by hand add its block
 # and run agent-tools/update.sh -- the files come back with the engine and are
 # registered.
 #
@@ -52,5 +52,5 @@ if [ "${#removed[@]}" -eq 0 ]; then
   echo "features: nothing to prune"
 else
   echo "features: not enabled in workspace.yaml, removed: ${removed[*]}"
-  echo "features: to enable one later, ask for it (\"add WhatsApp\" — the add-feature skill) or add its block and run agent-tools/update.sh"
+  echo "features: to enable one later, ask for it (\"add WhatsApp\", the configure-features skill) or add its block and run agent-tools/update.sh"
 fi
