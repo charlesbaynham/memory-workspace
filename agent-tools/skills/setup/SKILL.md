@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Set up, audit or repair the automations this workspace runs on its own — the memory filing pass (always required; nightly by default, up to hourly) and the WhatsApp webhook routine (when WhatsApp is configured) — registering what the agent can and walking the owner through the parts only they can do. Use after a workspace is born, after a major upgrade (the migration calls it), when memory-check says the nightly pass has stopped, when the owner says "set up the nightly memory pass", "set up the automations" or "check the webhooks", or when a scheduled task or webhook seems not to be firing.
+description: Set up, audit or repair the automations this workspace runs on its own — the memory filing pass (a scheduled task by default, nightly up to hourly; none when the owner chose in-session filing) and the WhatsApp webhook routine (when WhatsApp is configured) — registering what the agent can and walking the owner through the parts only they can do. Use after a workspace is born, after a major upgrade (the migration calls it), when memory-check says the nightly pass has stopped, when the owner says "set up the nightly memory pass", "set up the automations" or "check the webhooks", or when a scheduled task or webhook seems not to be firing.
 ---
 
 # Setting up the workspace's automations
@@ -20,7 +20,7 @@ anywhere else does not.
 
 | Automation | Needed when | Kind | Who does what |
 |---|---|---|---|
-| **Memory filing pass** | always | scheduled task, nightly by default, as often as hourly | the agent creates it; the owner chooses the frequency and the models |
+| **Memory filing pass** | `memory_filing` in `workspace.yaml` is `scheduled` or absent | scheduled task, nightly by default, as often as hourly | the agent creates it; the owner chooses the frequency and the models |
 | **WhatsApp wake** | `workspace.yaml` has a `whatsapp:` block with a real `bot_name` and `mcp_prefix` (not the example's `EventBot` / `mcp__Event_Whatsapp__`) | routine fired by the bridge's webhook | split between agent and owner: `agent-tools/skills/whatsapp/setup.md` (§11) |
 
 Other scheduled tasks the owner set up for this workspace (a daily report, a
@@ -79,7 +79,29 @@ Tell the owner what you found in a few lines before changing anything.
 
 ## 3. The memory filing pass
 
-**Ask the owner three things first**, with recommendations, in one message:
+**First, who runs it.** `memory_filing` in `workspace.yaml`: `scheduled` (or no
+key) or `in-session`. If the owner hasn't chosen, put it to them with the
+trade-off and recommend `scheduled`:
+
+- **scheduled**: a task files nightly (or as often as they choose), so memory
+  stays current and no working session pays for it. Costs a scheduled task to
+  keep alive, and a browser step to attach the repository.
+- **in-session**: no task. Whichever session finds `memory/log.md` past 40
+  entries files it before it ends. Nothing to register or go stale, but that
+  session spends the extra minutes, and memory is only as fresh as the last
+  time the threshold was hit.
+
+Write the answer to `workspace.yaml` (top level, beside `memory_filer_model`)
+and commit it.
+
+**`in-session`.** There is nothing to create. Ask only for the filer's model
+(below). If a filing task for this workspace is registered (§2), it will file
+twice over: tell the owner and, on their say-so, disable it with
+`update_trigger` `enabled: false`. Never delete it, which loses its run
+history. In `automations.md` (§6) record the filing pass as "in-session, no
+task", then skip the rest of this section.
+
+**`scheduled`.** Ask the owner three things first, with recommendations, in one message:
 
 - **How often.** Nightly is the default. More often (every few hours, or
   hourly) keeps memory fresher while things are busy (an event's last weeks, a project's crunch). A run with nothing new

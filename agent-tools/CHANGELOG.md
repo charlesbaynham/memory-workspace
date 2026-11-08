@@ -20,6 +20,40 @@ what they have to do about it.
      VERSION together, in the same commit as the change. One `## X.Y.Z — date`
      heading per version; headings are what the tooling parses. -->
 
+## 1.2.0 — 2026-11-08
+
+**Memory filing can run without a scheduled task.** Until now every workspace
+relied on a nightly scheduled task to file `memory/log.md` into the notes and
+the digest. A new `workspace.yaml` key lets the owner opt out.
+
+### Added
+
+- **`memory_filing: scheduled | in-session`** in `workspace.yaml`. `scheduled`
+  is the default, and what a workspace without the key keeps doing. With
+  `in-session` there is no scheduled task: when `memory-check.sh` reports the
+  log at 40 unfiled entries (the `MEMORY_COMPACT_THRESHOLD` default), the
+  session that sees it runs the `memory-compact` skill itself, after the work
+  it was started for and before it ends, without asking. Two sessions racing
+  to file are handled by the pass's existing `state-set` check.
+- The `setup` skill asks which mode the owner wants, writes the key, and in
+  `in-session` mode registers nothing. If it finds a filing task left over, it
+  offers to disable it (never delete it).
+- `ONBOARDING.md` offers the choice to new workspaces (template only; it does
+  not reach existing ones).
+
+### Changed
+
+- In `in-session` mode `memory-check.sh` drops the "pass last ran Nh ago, it
+  may have stopped" alarm, which has no task to blame, and reports the
+  threshold instead.
+- Contract wording: "the nightly pass" is now "the filing pass".
+
+### To do by hand
+
+- Nothing required. To switch an existing workspace to in-session filing, add
+  `memory_filing: in-session` to `workspace.yaml` and ask a session to "set up
+  the automations", which offers to disable the old filing task.
+
 ## 1.1.0 — 2026-10-27
 
 **Sessions log as they work again; reading transcripts is a bonus, not the

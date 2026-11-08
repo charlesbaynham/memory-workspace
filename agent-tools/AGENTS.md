@@ -12,7 +12,7 @@ That inverts the usual relationship: in most repos the code is the point and
 the notes are a by-product. **Here the notes are the point.** A session that
 learns something and leaves no trace has lost it, because the container it
 learned it in is destroyed at the end of the session. So every session writes
-down what it learns as it goes (see "Writing memory"), and a scheduled pass
+down what it learns as it goes (see "Writing memory"), and a filing pass
 files it.
 
 The *work* itself — spreadsheets, documents, whatever a task actually produces —
@@ -81,16 +81,24 @@ This repository carries the workspace's memory across sessions in `memory/`:
 - `memory/log.md` — append-only log every session writes to as it works (below).
 - `memory/user-edits.md` — the owner's corrections and exclusions. They
   constrain every write to memory.
-- `memory/filing-state.md` — when the nightly filing pass last ran.
+- `memory/filing-state.md` — when the filing pass last ran.
 
-**A filing pass keeps it current**, nightly by default or as often as hourly.
-The `memory-compact` skill, run by a scheduled task, reads `memory/log.md` and
-the git history since the last pass and files what is durable into the notes
-and the digest. When the session running it can also list cloud sessions (one
-run by hand from an interactive session can; a scheduled task's session
-can't), it reads the transcripts of sessions launched with this repository in
-scope too. That is a bonus, never something to rely on: **the log is the
-record.** Sessions without this repository in scope are never read.
+**A filing pass keeps it current.** The `memory-compact` skill reads
+`memory/log.md` and the git history since the last pass and files what is
+durable into the notes and the digest. When the session running it can also
+list cloud sessions (one run by hand from an interactive session can; a
+scheduled task's session can't), it reads the transcripts of sessions launched
+with this repository in scope too. That is a bonus, never something to rely on:
+**the log is the record.** Sessions without this repository in scope are never
+read.
+
+Who runs the pass is the owner's choice, `memory_filing` in `workspace.yaml`:
+
+- **`scheduled`** (the default, and what a workspace without the key does): a
+  scheduled task runs it, nightly by default or as often as hourly.
+- **`in-session`**: there is no scheduled task. **Filing is the job of whichever
+  session finds the log past the threshold** (40 entries; `memory-check.sh`
+  says so at `SessionStart`). See "The filing pass" below.
 
 You have no memory of previous sessions except these files. If information
 isn't in a note, check the log tail and `git log -p -- memory/` before
@@ -232,20 +240,35 @@ Two things still never go in memory:
 - **Instructions to the agent** ("always do X"). A standing instruction the
   owner wants belongs in `WORKSPACE.md`: flag it, don't file it.
 
-## The nightly pass
+## The filing pass
 
-`memory-check.sh` reports at `SessionStart` when the pass last ran. **Older
-than about 36 hours means the scheduled task has stopped or is failing.** Tell
-the owner once, then run the `setup` skill (below), which audits and repairs
-it. When the owner asks to compact, refresh or update memory, run the
-`memory-compact` skill by hand: it is the same pass.
+When the owner asks to compact, refresh or update memory, run the
+`memory-compact` skill by hand: it is the same pass in either mode.
+
+**`memory_filing: scheduled`** (or no key). `memory-check.sh` reports at
+`SessionStart` when the pass last ran. **Older than about 36 hours means the
+scheduled task has stopped or is failing.** Tell the owner once, then run the
+`setup` skill (below), which audits and repairs it.
+
+**`memory_filing: in-session`.** No task exists and none should be created, so
+the staleness alarm above does not apply. Instead `memory-check.sh` counts the
+unfiled entries in `memory/log.md` at `SessionStart`, and **when it reports the
+threshold reached, you file them**: invoke the `memory-compact` skill and run
+the pass, without asking the owner. Do it after you have dealt with what the
+session was started for and before it ends, so the owner's request is not held
+up, and never skip it because the session is unattended (a webhook wake, say).
+Two sessions can reach the threshold together; the pass handles that
+(`state-set` refuses a window another pass already covered), so if yours is
+refused, discard your changes and carry on. If the pass fails, say so to the
+owner in a line; the entries stay in the log for the next session to file.
 
 ## Automations — the `setup` skill
 
 This workspace relies on work that runs with nobody in the conversation:
 
-- **the memory filing pass**, always: nightly by default, or as often as the
-  owner chose;
+- **the memory filing pass**, when `memory_filing` is `scheduled` (the
+  default): nightly, or as often as the owner chose. With `in-session` there
+  is nothing to register;
 - **the WhatsApp wake**, a routine fired by the bridge's webhook, only when
   `workspace.yaml` configures WhatsApp (it is optional).
 

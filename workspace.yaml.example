@@ -24,9 +24,15 @@ agent_tools_track: pinned
 # agent_tools_update_check: off            # stop offering updates entirely
 # agent_tools_version_skip: 0.6.0, abc123def456   # declined: versions (pinned) or upstream commits (latest)
 
-# The memory filing pass (memory-compact skill). The setup skill writes this
-# with the owner's choice: the model of the filer subagent, which decides what
-# is durable and edits the notes. sonnet is the default; opus costs more.
+# Who runs the memory filing pass (memory-compact skill).
+#   scheduled  (default) a scheduled task files nightly, or as often as you
+#              choose; the setup skill registers it.
+#   in-session no scheduled task. Whichever session finds memory/log.md past 40
+#              entries files it before it ends (memory-check.sh says when).
+# memory_filing: scheduled
+# The model of the filer subagent, which decides what is durable and edits the
+# notes. The setup skill writes this with the owner's choice. sonnet is the
+# default; opus costs more. Applies in either mode.
 # memory_filer_model: sonnet
 
 # Whose word is authoritative in a session. Technical register.
