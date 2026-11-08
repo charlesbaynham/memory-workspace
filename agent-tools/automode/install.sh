@@ -6,55 +6,129 @@
 #
 # Where to run it:
 #   - Claude Code on the web: from the environment's setup script, so the
-#     rules exist before the session starts. If the setup script runs before
-#     the repo is cloned, paste the output of `install.sh --inline` instead —
-#     a self-contained block that carries the rules with it.
+#     rules exist before the session starts. That script runs after the
+#     repositories are cloned, in the directory that holds the checkouts, and
+#     a shared (default) environment serves repositories of every kind. Paste
+#     the block `install.sh --snippet` prints: it finds each memory workspace
+#     among the checkouts, calls that workspace's own install.sh, and does
+#     nothing at all when there is none. Calling this script directly also
+#     works, for an environment that serves one workspace.
 #   - A local machine: once, by hand. An agent cannot do this for you: in auto
 #     mode the classifier denies the write as self-modification, and a change
 #     made mid-session is not honoured anyway (measured 2026-09-20).
 #
-# Idempotent, merge-safe (only the autoMode key is replaced), exits 0 on any
-# failure so it can never block a session from starting. The SessionStart
-# hook agent-tools/hooks/automode-check.sh reports whether what is installed
-# matches the repo.
+# Safe to run anywhere, any number of times:
+#   - It works out which workspace it belongs to from its own path, never from
+#     $PWD, so the setup script's working directory does not matter.
+#   - It does nothing unless that directory is a memory workspace
+#     (workspace.yaml) with an automode.json. The upstream template has
+#     neither, so a session that only has the template attached installs
+#     nothing.
+#   - It MERGES: each rule list is added to, never replaced, so rules the
+#     environment already carries (its own, or another workspace's) survive.
+#     "$defaults" is only written into a list that did not exist yet.
+#   - Idempotent (a second run changes nothing), and exits 0 on any failure so
+#     it can never block a session from starting.
+# The SessionStart hook agent-tools/hooks/automode-check.sh reports whether
+# every rule in automode.json is present in what is installed.
+#
+# Limits: a merge never removes a rule a workspace has since dropped, so an
+# environment whose settings persist between sessions keeps it; a setup script
+# that rebuilds the file from scratch each time (the usual case) does not.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
-. "$(dirname "${BASH_SOURCE[0]}")/../lib.sh"
+# The workspace this copy of the script belongs to. Deliberately not lib.sh's
+# ROOT (the git toplevel of $PWD, or $PWD): the setup script starts in the
+# directory above the checkouts, which is neither.
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CANON="${AUTOMODE_RULES:-$ROOT/automode.json}"
-TARGET="$HOME/.claude/settings.json"
+TARGET="${AUTOMODE_TARGET:-$HOME/.claude/settings.json}"
 
-[ -f "$CANON" ] || { echo "automode: no $CANON — nothing to install"; exit 0; }
+# One merge, used by the direct run and by --inline.
+MERGE_PY='
+def merge(cur, rules):
+    """Add each rule list in rules to cur["autoMode"]; return True if changed."""
+    am = cur.get("autoMode")
+    if not isinstance(am, dict):
+        am = {}
+    changed = not isinstance(cur.get("autoMode"), dict)
+    for key, items in rules.items():
+        if not isinstance(items, list):
+            continue
+        have = am.get(key)
+        fresh = not isinstance(have, list) or not have
+        have = [] if not isinstance(have, list) else have
+        add = [r for r in items if r not in have and (fresh or r != "$defaults")]
+        if add or key not in am:
+            am[key] = have + add
+            changed = True
+    cur["autoMode"] = am
+    return changed
+'
+
+if [ "${1:-}" = "--snippet" ]; then
+  # Paste-once block for the setup script of a shared environment. It carries
+  # no rules and no version, so it never needs re-pasting: the rules come from
+  # each workspace's own automode.json and install.sh at the time it runs.
+  cat <<'SNIP'
+# --- memory workspaces: install auto-mode rules from any that are checked out ---
+# No-op when none is (a workspace is a checkout with workspace.yaml). Paste
+# AFTER any block that writes autoMode wholesale; this one only adds to it.
+_seen=" "
+# Candidates: the checkout we are in (cwd, or its git toplevel from a subfolder),
+# the checkouts beside or below cwd, and the usual homes of cloud checkouts.
+for _d in "$PWD" "$(git -C "$PWD" rev-parse --show-toplevel 2>/dev/null)" \
+          "$PWD"/*/ "$HOME"/*/ /home/user/*/; do
+  [ -n "$_d" ] || continue
+  _d="$(cd "$_d" 2>/dev/null && pwd)" || continue
+  case "$_seen" in *" $_d "*) continue ;; esac; _seen="$_seen$_d "
+  [ -f "$_d/workspace.yaml" ] && [ -f "$_d/agent-tools/automode/install.sh" ] \
+    && bash "$_d/agent-tools/automode/install.sh" || true
+done
+unset _seen _d
+# --- end memory workspaces ---
+SNIP
+  exit 0
+fi
 
 if [ "${1:-}" = "--inline" ]; then
+  [ -f "$CANON" ] || { echo "automode: no $CANON — nothing to print" >&2; exit 0; }
   cat <<SNIP
 # --- auto-mode classifier rules (generated by agent-tools/automode/install.sh --inline) ---
+# Unconditional: carries the rules whether or not this workspace is among the
+# checkouts. Prefer `install.sh --snippet` (discovery) unless the
+# setup script really runs before the clone.
 python3 - <<'PY' || true
 import json, os, pathlib
+$MERGE_PY
 rules = json.loads(r'''$(cat "$CANON")''')["autoMode"]
 p = pathlib.Path(os.path.expanduser("~/.claude/settings.json")); p.parent.mkdir(parents=True, exist_ok=True)
 try: cur = json.loads(p.read_text())
 except Exception: cur = {}
-cur["autoMode"] = rules
-p.write_text(json.dumps(cur, indent=2) + "\n")
-print("automode: rules installed")
+if merge(cur, rules): p.write_text(json.dumps(cur, indent=2) + "\n")
+print("automode: rules merged")
 PY
 # --- end auto-mode rules ---
 SNIP
   exit 0
 fi
 
-python3 - "$CANON" "$TARGET" <<'PY' || echo "automode: install failed (non-fatal)"
+[ -f "$ROOT/workspace.yaml" ] || { echo "automode: $ROOT is not a memory workspace — nothing to install"; exit 0; }
+[ -f "$CANON" ] || { echo "automode: no $CANON — nothing to install"; exit 0; }
+command -v python3 >/dev/null 2>&1 || { echo "automode: python3 not found — nothing installed"; exit 0; }
+
+python3 - "$CANON" "$TARGET" <<PY || echo "automode: install failed (non-fatal)"
 import json, pathlib, sys
+$MERGE_PY
 canon, target = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2])
 rules = json.loads(canon.read_text())["autoMode"]
 target.parent.mkdir(parents=True, exist_ok=True)
 try: cur = json.loads(target.read_text())
 except Exception: cur = {}
-if cur.get("autoMode") == rules:
-    print(f"automode: {target} already matches {canon.name}"); raise SystemExit
-cur["autoMode"] = rules
+if not merge(cur, rules):
+    print(f"automode: {target} already has every rule in {canon}"); raise SystemExit
 target.write_text(json.dumps(cur, indent=2) + "\n")
-print(f"automode: installed {canon.name} into {target}")
+print(f"automode: merged {canon} into {target}")
 PY
 exit 0

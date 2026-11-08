@@ -47,13 +47,69 @@ What this engine does about it: the consumer keeps its rules in
 `automode.json` at the repo root (start from `automode.json.example`);
 `agent-tools/automode/install.sh` merges them into `~/.claude/settings.json`
 and is meant to run from the cloud environment's setup script, before the
-session starts (`install.sh --inline` prints a self-contained block to paste
-if the setup script runs before the clone; on a local machine, run it once by
-hand). `agent-tools/hooks/automode-check.sh` reports at every session start
-whether the installed rules match the repo, so drift is visible rather than
-assumed away. Known limit: `install.sh` sets the whole `autoMode` key, so an
-environment that serves several workspaces keeps whichever ran last — give
-each workspace its own cloud environment, or merge the lists by hand.
+session starts (on a local machine, run it once by hand).
+`agent-tools/hooks/automode-check.sh` reports at every session start whether
+every rule in `automode.json` is installed, so drift is visible rather than
+assumed away.
+
+### One setup script for every session: install only what is in scope
+
+A user's default environment serves every repository they launch, so the
+setup script cannot assume a workspace is there, nor where. What a session
+gets is a directory of checkouts (Claude does not start inside any one of
+them when several are attached), and the setup script runs in it after the
+clones. Measured 2026-11-08: the default environment's script ran about 30 s
+after the checkout was written, and `~/.claude/settings.json` was written by
+it, so the clone is there to be found. Three rules follow, and `install.sh`
+keeps all three:
+
+- **Find the workspace by what it is, not where it is.** A memory workspace is
+  a checkout with `workspace.yaml`; the template has only
+  `workspace.yaml.example`. `install.sh --snippet` prints the loop to paste
+  into the environment's setup script: it looks in `$PWD`, its git toplevel, `$PWD/*`,
+  `$HOME/*` and `/home/user/*`, runs each workspace's *own* `install.sh`, and
+  does nothing if there are none. It carries no rules and no version, so it is pasted once;
+  the rules and the logic come from the repository at the time it runs.
+  `install.sh` itself takes the workspace from its own path, never `$PWD`,
+  and refuses quietly if that directory is not a workspace with an
+  `automode.json` (template, other repos, a workspace without the feature).
+- **Merge; never replace.** `autoMode` is one key in one file shared by
+  everything the environment does. The script adds each rule to the list of the
+  same name (`"$defaults"` only into a list that did not exist) and keeps the
+  rest, so the environment's own rules and several workspaces' rules coexist
+  and a second run changes nothing. Order matters the other way too: a block
+  that sets `autoMode` wholesale (`cur.update(...)`, `cur["autoMode"] = ...`)
+  must come *before* the snippet, or it discards what the snippet merged.
+  `automode-check.sh` reports that case as "partly installed".
+- **Exit 0 whatever happens.** A failing setup script stops the session from
+  starting, and the rules are an optional extra.
+
+The four launches, as tested (scratch checkouts, fake `$HOME`):
+
+| Session starts in | Setup script | Result |
+|---|---|---|
+| a memory workspace (alone) | cwd is the repo, its parent, or a subfolder: found all three ways | rules merged |
+| another repo (alone) | no `workspace.yaml` anywhere in scope | nothing written |
+| a parent holding a workspace and others | found beside cwd | rules merged |
+| a parent holding no workspace | nothing found | nothing written |
+
+This covers the *setup script* only. What a session loads once it starts
+depends on where Claude starts: inside the workspace, its
+`.claude/settings.json` hooks and `CLAUDE.md` imports apply; started in the
+parent of several repos, they probably do not (untested).
+
+`install.sh --inline` still prints a self-contained block that carries the
+rules, for a setup script that runs before the clone. It cannot be
+conditional, since the rules go in whether or not the workspace is attached,
+so it is the fallback and not the recommendation. Known limit: a merge cannot
+remove a rule a workspace has dropped; an environment that rebuilds
+`~/.claude/settings.json` in its setup script each time (the default does)
+never carries one over.
+
+Other things the environment has to hold are inert without a workspace and
+need no condition: an environment variable such as `GOOGLE_SERVICE_ACCOUNT_KEY`
+is read only by the `gsheets` skill, and allowed network hosts only matter to
+a session that tries to reach them.
 Anything the classifier must hear *in-session* — "the send-gate
 is the authorisation control for message content" — goes in the routine
 prompt, which it does read; the `permissions.allow` entries for the bot's

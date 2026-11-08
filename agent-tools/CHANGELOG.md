@@ -20,6 +20,50 @@ what they have to do about it.
      VERSION together, in the same commit as the change. One `## X.Y.Z — date`
      heading per version; headings are what the tooling parses. -->
 
+## 1.3.0 — 2026-11-08
+
+**The auto-mode installer is safe to put in a shared cloud environment.** A
+default environment serves every repository you launch, usually several at
+once, so its setup script cannot know whether a memory workspace is among
+them, nor which directory it is in. `agent-tools/automode/install.sh` used to
+assume it was run from inside the one workspace, and replaced your whole
+`autoMode` block, so it could not be shared and would have erased rules the
+environment already had.
+
+### Changed
+
+- **`install.sh` finds its workspace from its own path, not the working
+  directory**, and does nothing (exit 0, one line) unless that directory has a
+  `workspace.yaml` and an `automode.json`. Run from the setup script's
+  directory, from the template, or from a workspace that has no rules, it
+  installs nothing.
+- **`install.sh` merges instead of replacing.** Each rule list is added to, so
+  rules the environment already carries, and the rules of other workspaces,
+  survive; `"$defaults"` is only written into a list that did not exist. A
+  second run changes nothing. `--inline` merges the same way.
+- **`automode-check.sh` reports "in sync" when every rule in `automode.json`
+  is installed**, not when the whole block is identical, since the live block
+  may now carry more. A block missing some of your rules is reported as
+  "partly installed".
+
+### Added
+
+- **`install.sh --snippet`** prints a block to paste once into the setup
+  script of a shared environment. It finds each memory workspace among the
+  checkouts (`$PWD`, its git toplevel, `$PWD/*`, `$HOME/*`, `/home/user/*`), runs that workspace's own
+  `install.sh`, and does nothing when there is none. It carries no rules and
+  no version, so it never needs re-pasting.
+
+### To do by hand
+
+Nothing breaks: a setup script that already calls
+`agent-tools/automode/install.sh` keeps working. If your environment is shared
+with other repositories, replace that call with the block
+`agent-tools/automode/install.sh --snippet` prints, so the setup script no
+longer depends on one workspace's path. Put it after any block that sets
+`autoMode` wholesale, because that kind of block discards what was merged
+before it. Environments used only for this workspace need nothing.
+
 ## 1.2.0 — 2026-11-08
 
 **Memory filing can run without a scheduled task.** Until now every workspace
