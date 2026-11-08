@@ -148,7 +148,7 @@ Three things to be straight about when they ask:
   on exactly when `workspace.yaml` has a `sheets:` / `whatsapp:` block, and
   step 4 runs `agent-tools/features.sh`, which removes the skills, scripts and
   registrations of whichever is absent. `update.sh` runs it too, so they stay
-  gone. Turning one on later is: add the block, run `agent-tools/update.sh`.
+  gone. Turning one on later is the `add-feature` skill ("add WhatsApp").
   "Later" for WhatsApp keeps the block (commented as unused), so its skill
   stays available for the setup walk-through.
 - **The engine is not theirs to edit.** `agent-tools/` and the root `AGENTS.md`
@@ -383,6 +383,9 @@ Tell them what is left, listing only what their answers actually require:
   `agent-tools/skills/whatsapp/setup.md`. When they have them, open a session in
   the new repository and say "set up the WhatsApp routine"; the skill walks both
   parties through it.
+- **Features they skipped**: say that "add WhatsApp", "add Google Sheets" or
+  "add more features from the original repository" in a session starts the
+  `add-feature` skill, which turns them on later.
 - **Nothing, if none of the above** — say that too, and say what the first
   useful session looks like instead: open the repository and start telling it
   about the event, the project or the admin.
