@@ -247,9 +247,12 @@ When the owner asks to compact, refresh or update memory, run the
 `memory-compact` skill by hand: it is the same pass in either mode.
 
 **`memory_filing: scheduled`** (or no key). `memory-check.sh` reports at
-`SessionStart` when the pass last ran. **Older than about 36 hours means the
-scheduled task has stopped or is failing.** Tell the owner once, then run the
-`setup` skill (below), which audits and repairs it.
+`SessionStart` when the pass last filed. A run with nothing new records
+nothing, so an old pass on its own is normal after a quiet spell; **the hook
+says "it may have stopped" only when a log entry has also waited unfiled for
+more than about 36 hours, which means the scheduled task has stopped or is
+failing.** Then tell the owner once, and run the `setup` skill (below), which
+audits and repairs it.
 
 **`memory_filing: in-session`.** No task exists and none should be created, so
 the staleness alarm above does not apply. Instead `memory-check.sh` counts the
