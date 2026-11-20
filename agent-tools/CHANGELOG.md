@@ -20,6 +20,19 @@ what they have to do about it.
      VERSION together, in the same commit as the change. One `## X.Y.Z — date`
      heading per version; headings are what the tooling parses. -->
 
+## 1.4.1 — 2026-11-20
+
+### Fixed
+
+- **No more false "the nightly memory pass may have stopped" warning after a
+  quiet day.** A pass with nothing new to file records nothing, so after a day
+  with no log entries `memory-check.sh` saw a pass more than 36 hours old and
+  reported the task as stopped although every run had succeeded. It now warns
+  only when a log entry has also waited unfiled for more than 36 hours (dated
+  from the commit that added it), which a working nightly task never allows.
+  Where git can't date the entries, it falls back to the old check.
+- The contract and the `memory-compact` skill describe the warning that way.
+
 ## 1.4.0 — 2026-11-08
 
 **Features you did not choose are no longer installed.** A workspace that

@@ -146,10 +146,12 @@ workspace's other automations. Use that; don't create a task from here. With
 
 ## When something is off
 
-- `memory-check.sh` reports the last pass at SessionStart. With a scheduled
-  task, older than about 36 hours means the task has stopped or is failing: say
-  so to the owner once, then run the `setup` skill, which audits and repairs
-  it. With `memory_filing: in-session` there is no such alarm; the hook says
+- `memory-check.sh` reports the last pass at SessionStart. A run that ends
+  on "nothing new" records nothing, so the last pass's age alone proves
+  nothing. With a scheduled task, the hook says "it may have stopped" when a
+  log entry has also waited unfiled for more than about 36 hours: then the
+  task has stopped or is failing. Say so to the owner once, then run the
+  `setup` skill, which audits and repairs it. With `memory_filing: in-session` there is no such alarm; the hook says
   when the threshold is reached instead.
 - Co-users on their own Claude accounts, local CLI sessions and Codex are
   invisible to the listing. The contract tells those sessions to keep logging.

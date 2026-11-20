@@ -71,6 +71,31 @@ if [ -n "$LAST_RUN" ] && [ "$LAST_RUN" != never ]; then
   [ -n "$then_s" ] && AGE_H=$(( ($(date +%s) - then_s) / 3600 ))
 fi
 
+# A pass with nothing to file commits nothing, so LAST_RUN stands still on a
+# quiet day and its age alone can't tell a stalled task from an idle one. A
+# stall shows as unfiled work left waiting: an entry still unfiled STALE_HOURS
+# after it was committed has sat through at least one scheduled run that
+# should have filed it. Its age comes from git blame's committer time
+# (uncommitted lines count as new; in a shallow clone the boundary commit's
+# time, which can only under-report). Empty when there are no unfiled entries,
+# or when git can't say.
+OLDEST_H=""
+if [ "${ENTRIES:-0}" -gt 0 ]; then
+  oldest_s="$(git blame --line-porcelain -L "$(( ${BASELINE:-0} + 1 ))," -- "$LOG" 2>/dev/null \
+    | awk '/^committer-time / { t = $2 }
+           /^\t- \[[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]\]/ { print t }' \
+    | sort -n | head -1)"
+  [ -n "$oldest_s" ] && OLDEST_H=$(( ($(date +%s) - oldest_s) / 3600 ))
+fi
+
+# Stalled: the last pass is old AND work has waited too long for one. With no
+# unfiled entries nothing is overdue. If git couldn't date them, fall back to
+# the pass's age alone.
+STALLED=""
+if [ -n "$AGE_H" ] && [ "$AGE_H" -gt "$STALE_HOURS" ] && [ "${ENTRIES:-0}" -gt 0 ]; then
+  if [ -z "$OLDEST_H" ] || [ "$OLDEST_H" -gt "$STALE_HOURS" ]; then STALLED=1; fi
+fi
+
 # workspace.yaml `memory_filing`: `scheduled` (default) = a scheduled task runs
 # the pass; `in-session` = no task, and whichever session finds the log past the
 # threshold files it.
@@ -92,18 +117,22 @@ elif [ "$FILING" = in-session ]; then
     note "run the memory-compact skill (no need to ask the owner)."
   fi
 elif [ -n "$AGE_H" ]; then
-  if [ "$AGE_H" -gt "$STALE_HOURS" ]; then
-    note "the nightly memory pass last ran ${AGE_H}h ago ($LAST_RUN) — it may have stopped."
+  if [ -n "$STALLED" ]; then
+    if [ -n "$OLDEST_H" ]; then
+      note "the nightly memory pass last filed ${AGE_H}h ago ($LAST_RUN), and a log entry has waited ${OLDEST_H}h unfiled — it may have stopped."
+    else
+      note "the nightly memory pass last filed ${AGE_H}h ago ($LAST_RUN) — it may have stopped."
+    fi
     note "Tell the owner once; the setup skill audits and repairs it."
   else
-    note "nightly memory pass last ran ${AGE_H}h ago; $ENTRIES log entries wait for the next."
+    note "nightly memory pass last filed ${AGE_H}h ago; $ENTRIES log entries wait for the next."
   fi
 else
   note "no nightly memory pass has run here yet; $ENTRIES log entries are waiting."
   note "If the owner has not set one up, offer once: the setup skill creates it."
 fi
 
-if ! in_template && [ "$FILING" != in-session ] && [ "$ENTRIES" -ge "$THRESHOLD" ] && { [ -z "$AGE_H" ] || [ "$AGE_H" -gt "$STALE_HOURS" ]; }; then
+if ! in_template && [ "$FILING" != in-session ] && [ "$ENTRIES" -ge "$THRESHOLD" ] && { [ -z "$AGE_H" ] || [ -n "$STALLED" ]; }; then
   note "$ENTRIES unfiled log entries and no recent pass — run the memory-compact skill now if the owner agrees."
 fi
 
